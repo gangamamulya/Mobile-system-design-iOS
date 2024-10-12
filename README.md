@@ -222,9 +222,9 @@ This roadmap outlines the critical steps and considerations for designing an iOS
    * Test Against Different Conditions (Network conditions, datasets, devices)
      Unit & Integration Testing
 
-  # Photos App - README
+  # Photos App 
 
-This README provides a comprehensive guide to the design and implementation of the Photos App, including functional and non-functional requirements, models, API specifications, storage strategies, system design considerations, and user experience (UX) details. The app is designed to handle media management, with support for offline functionality and seamless cloud integration. The app is aimed at 1 billion users, especially in regions with poor network connectivity, such as India.
+This section provides a comprehensive guide to the design and implementation of the Photos App, including functional and non-functional requirements, models, API specifications, storage strategies, system design considerations, and user experience (UX) details. The app is designed to handle media management, with support for offline functionality and seamless cloud integration. The app is aimed at 1 billion users, especially in regions with poor network connectivity, such as India.
 
 ---
 
