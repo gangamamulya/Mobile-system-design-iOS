@@ -193,3 +193,231 @@ This README provides a detailed roadmap for designing an iOS mobile system archi
 ---
 
 This roadmap outlines the critical steps and considerations for designing an iOS mobile application, ensuring scalability, performance, and security, while providing a foundation for a successful MVP.
+
+#  Roadmap
+
+* Requirements
+   * Functional Requirements
+   * Non-functional Requirements
+   * Out of Scope
+   * System constraints
+* System design
+   *  Data model
+   * API
+   * High level system design
+   * Low level system design
+   * Database design choice (client side (e.g., Core Data, SQLite, Realm, File system) , server side)
+* Performance and optimization 
+   * API Calls limit ( cache (initial fetch, offline mode, n/w failure), rate limiting, batching requests)
+   * UI Optimization (Lazy loading, prefetching, pagination)
+   * Memory management(cache policies, GCD & asynchronous process to offload tasks from main thread, on Appear optimization)
+   * Avoid expensive operations( Img processing (compress), data processing, prefetching)
+* Security & Privacy (icloud, SSLPinning)
+   * Authentication (Token-based to handle multiple accounts)
+   * Data Encryption (At rest and in transit)
+   * Privacy (User consent, sensitive data handling, GDPR compliance)
+   * SSL Pinning (For secure network communication)
+   * iCloud keychain(For secure storage)
+*  Testing
+   * Test Against Different Conditions (Network conditions, datasets, devices)
+     Unit & Integration Testing
+
+  # Photos App - README
+
+This README provides a comprehensive guide to the design and implementation of the Photos App, including functional and non-functional requirements, models, API specifications, storage strategies, system design considerations, and user experience (UX) details. The app is designed to handle media management, with support for offline functionality and seamless cloud integration. The app is aimed at 1 billion users, especially in regions with poor network connectivity, such as India.
+
+---
+
+## 1. General + Functional Overview
+
+### 1.1. Target Users
+- Individuals who want to manage, store, and share photos.
+- Popular in regions with varying network conditions, especially in India where internet connectivity can be poor.
+
+### 1.2. Supported Features
+- **Photo Management**: Capture, upload, download, and view photos.
+- **Album Management**: Create, manage, and share albums with other users.
+- **Interaction Capabilities**: Users can interact with photos by viewing, zooming, deleting, and sharing.
+- **Media Types**: The app currently supports photos stored as raw bytes (encrypted), with the potential for future extension to videos, documents, etc.
+
+### 1.3. API + Client + Networking
+- The app involves both client-side functionalities (e.g., photo capture, album management) and backend support through RESTful APIs (e.g., photo upload, download, sharing).
+- Offline support is critical, and the system is optimized for slow or unstable networks.
+
+---
+
+## 2. Requirements
+
+### 2.1. Functional Requirements
+- **Core Features**:
+    - Take photos and create albums.
+    - Upload and download photos, including multiple resolution options for thumbnails and full-resolution images.
+    - Share photos and albums with other users, with secure link generation.
+- **Media Handling**:
+    - Photos are stored as encrypted raw bytes, with references stored either locally or in the cloud.
+
+### 2.2. Non-functional Requirements
+- **Offline Mode**: Users can access locally stored photos and queue uploads to be processed when the network is available.
+- **Network Efficiency**: Handle slow or unreliable networks gracefully by using lower-quality images and batching requests.
+- **Privacy and Security**: Photos are encrypted both at rest and during transit to ensure user privacy.
+
+### 2.3. Out of Scope
+- **Photo Editing**: Editing capabilities (e.g., filters, cropping) are not included.
+- **Authentication**: User authentication (e.g., sign-up, login) is not part of this version.
+
+### 2.4. Constraints
+- The app must be able to scale to **1 billion users**, with a focus on efficient handling in regions with **poor network connectivity**, such as India.
+
+---
+
+## 3. Models
+
+### 3.1. Album Model
+Represents a photo album and its associated metadata.
+
+- **id**: Unique identifier for the album.
+- **name**: The album's title.
+- **description**: A short description of the album.
+- **photo_ids**: A list of photos belonging to this album.
+- **createdDate**: Timestamp when the album was created.
+- **modifiedDate**: Timestamp when the album was last updated.
+- **isSharedWith**: List of users this album has been shared with.
+- **sharedWith**: List of user IDs who have access to the album.
+
+### 3.2. Photo Model
+Represents a photo and its associated metadata.
+
+- **id**: Unique identifier for the photo.
+- **name**: The name of the photo.
+- **description**: A short description of the photo.
+- **createdDate**: Timestamp when the photo was captured or uploaded.
+- **modifiedDate**: Timestamp when the photo was last modified.
+- **albums**: List of albums the photo belongs to.
+- **rawBytesReference**: URI or cloud storage key referencing the raw image data.
+- **location**: Optional geolocation data where the photo was captured.
+- **format**: Image format (JPEG, PNG, etc.).
+- **fileSize**: Size of the image file.
+
+---
+
+## 4. API Specifications
+
+### 4.1. Photo Management APIs
+- **POST /api/photos/upload**: Upload a photo.
+- **GET /api/photos/{photoId}**: Download a specific photo by its ID.
+- **DELETE /api/photos/{photoId}**: Delete a specific photo by its ID.
+
+### 4.2. Album Management APIs
+- **POST /api/albums/create**: Create a new album.
+- **GET /api/albums/{albumId}**: Retrieve details of a specific album.
+- **PUT /api/albums/{albumId}**: Update the information of a specific album.
+- **DELETE /api/albums/{albumId}**: Delete a specific album.
+
+### 4.3. Album Photos APIs
+- **POST /api/albums/{albumId}/add-photo/{photoId}**: Add a photo to an album.
+- **DELETE /api/albums/{albumId}/remove-photo/{photoId}**: Remove a photo from an album.
+- **GET /api/albums/{albumId}/photos**: Retrieve a list of photos in a specific album.
+
+### 4.4. Sharing APIs
+- **POST /api/photos/{photoId}/share**: Share a specific photo.
+- **POST /api/albums/{albumId}/share**: Share a specific album.
+
+### 4.5. Paginated APIs
+Supports cursor-based pagination to handle large datasets.
+
+- **GET /api/photos**: Retrieve a paginated list of all photos.
+  - **Query Parameters**: 
+    - **cursor** (optional): Pointer to the next batch of photos.
+    - **limit** (optional): Number of photos to retrieve per request.
+
+- **GET /api/albums**: Retrieve a paginated list of all albums.
+  - **Query Parameters**:
+    - **cursor** (optional): Pointer to the next batch of albums.
+    - **limit** (optional): Number of albums to retrieve per request.
+
+---
+
+## 5. High-Level System Design
+
+### 5.1. Client-side Responsibilities
+- **Photo Capture Module**: Manages photo capture and uploads.
+- **Photo View Module**: Displays photos in the gallery view, with zoom functionality and interactions.
+- **Offline Mode**: Supports offline access by caching locally encrypted photos and queuing uploads.
+
+### 5.2. Backend-side Responsibilities
+- **Storage**: Handles photo storage using cloud services such as AWS S3 or Firebase.
+- **API Handling**: Manages requests and responses for photo uploads, downloads, album management, and sharing.
+- **Performance Optimizations**: Ensures low-latency responses by caching metadata and photos, and using efficient storage mechanisms.
+
+### 5.3. Storage Strategies
+- **Client-side**: Uses **FileManager** for offline storage, with encryption for privacy.
+- **Cloud-side**: Photos are stored in the cloud, with references saved in the database.
+- **Caching**: Thumbnails and frequently accessed photos are cached locally for performance optimization.
+
+---
+
+## 6. Storage Considerations
+
+### 6.1. Client-Side Storage
+- **Encrypted Local Storage**: Photos are saved in an encrypted form using **FileManager**. They are encrypted using **CryptoKit** for security.
+- **Caching**: Frequently accessed thumbnails are cached using **NSCache** for faster retrieval.
+
+### 6.2. Server-Side Storage
+- **Blob Storage**: Storing large binary objects (BLOBs) such as photos directly in the database can be avoided by storing them in the cloud. The database stores references (e.g., URLs) to the images in cloud storage services such as **AWS S3** or **Firebase**.
+
+---
+
+## 7. Performance and Optimization Techniques
+
+### 7.1. API Call Management
+- **Caching**: Store API responses locally to reduce network requests and handle offline scenarios.
+- **Batching**: Group API requests (e.g., uploading multiple photos) to reduce overhead and optimize performance.
+- **Rate Limiting**: Ensure the system uses rate-limiting strategies to avoid overwhelming the server.
+
+### 7.2. UI Optimization
+- **Lazy Loading**: Photos are loaded on-demand to reduce initial load time and improve performance, especially for large photo libraries.
+- **Progressive Loading**: Use low-resolution placeholders while the full-resolution image is being downloaded.
+- **Memory Management**: Manage memory carefully by unloading off-screen images and caching visible ones.
+
+### 7.3. Offline Access
+- **Prefetching**: Preload images when the user is on a stable connection, so that the user experience is seamless even during poor network conditions.
+- **Queued Uploads**: When offline, uploads are queued and processed when the app is back online.
+
+---
+
+## 8. Security and Privacy
+
+### 8.1. Data Encryption
+- **AES Encryption**: Photos stored locally are encrypted using **AES-256** to ensure privacy.
+- **TLS/HTTPS**: All communication between the client and server is secured using TLS/HTTPS, ensuring data privacy during transit.
+
+### 8.2. Secure Authentication
+- **OAuth 2.0** or **JWT**: Tokens are used to authenticate users and control access to photos and albums.
+
+### 8.3. Privacy Considerations
+- **GDPR Compliance**: The app follows best practices for handling user data, ensuring consent is collected and personal data is stored securely.
+
+---
+
+## 9. Scalability and Bottleneck Analysis
+
+### 9.1. Bottlenecks
+- **Database Performance**: Handling large numbers of users and photo uploads can be bottlenecked by database performance. Scaling strategies such as **read replicas** and **partitioning** may be necessary.
+- **Network Latency**: Slow networks may affect photo uploads and downloads. Strategies like batching, caching, and rate limiting can mitigate these issues.
+
+### 9.2. Scaling Techniques
+- **Horizontal Scaling**: Distribute traffic across multiple instances to handle large numbers of users.
+- **Database Replication**: Use database replication and sharding to ensure high availability and performance under heavy load.
+- **CDN Integration**: Use a **Content Delivery Network (CDN)** for faster photo delivery across the globe, reducing latency for users in different regions.
+![GooglePhotos](https://github.com/user-attachments/assets/348e5ba7-7e51-49d0-9c41-a4841e1b77e7)
+
+
+
+
+
+
+---
+
+This detailed README document outlines all critical aspects of the Photos App, from design to deployment, ensuring scalability, security, and a smooth user experience.
+
+
